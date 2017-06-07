@@ -14,41 +14,60 @@ library(lme4)
 library(magrittr)
 library(stringr)
 library(readr)
-library(BProDRA)
-
+library(bprodradata)
 
 print("hey ho, let's go")
-mods_list <- list()
-pitcher_ranef_list <- list()
-dra_events_list <- list()
+dra_runs <- list()
+pit_ranef <- list()
+model_ranef <- list()
+print(.libPaths()[[1]])
+print(list.files(.libPaths()[[1]]))
+
+make_full_name <- function(df_data, df_master) {
+
+}
 
 for (year in c(2007, 2016)) {
   key <- as.character(year)
   cat(sprintf("loading data for year: %d\n", year))
-  dra_events_list[[key]] <- BProDRA::load_events_data(year)
-  mods_list[[key]] <- BProDRA::load_fitted_dra_models(year)
-  #   pitcher_ranef_list[[key]] <- data.frame(x=1:10)
-  pitcher_ranef_list[[key]] <- BProDRA::extract_pitcher_ranef(mods_list[[key]])
+  tmp <- bprodradata::load_dra_runs(year)
+  dra_runs[[key]] <- tmp$dra_runs
+  pit_ranef[[key]] <- tmp$pit_ranef
+  model_ranef[[key]] <- tmp$model_ranef
 }
 
 print("done")
+
+id_from_key <- function(key) {
+  x <- str_split(key, " ")[[1]]
+  nl <- length(x)
+  x[[nl]]
+}
 
 # Define server logic required to draw a histogram
 shinyServer(function(input, output) {
 
   output$selectUI<-renderUI({
-    pit_id_list <- unique(pitcher_ranef_list[[input$year]]$var_id)
-    selectInput("pit_id", "select pit_id", pit_id_list)
+    pit_id_list <- unique(pit_ranef[[input$year]]$var_id)
+
+    df1 <- data_frame(pit_id=pit_id_list)
+    pit_key <- df1 %>%
+      merge(Lahman::Master %>%
+              mutate(FullName=paste(nameFirst, nameLast, sep=" ")),
+            by.x="pit_id", by.y="retroID") %>%
+      select(pit_id, FullName) %>%
+      mutate(pit_key = paste(FullName, pit_id, sep=" ")) %$% pit_key
+    selectInput("pit_key", "select pit_id", pit_key)
   })
 
   output$pit_list_label <- renderText({
-    pit_id_list <- unique(pitcher_ranef_list[[input$year]]$var_id)
+    pit_id_list <- unique(pit_ranef[[input$year]]$var_id)
 
-    tmp <- ""
-    for (i in seq_along(names(pitcher_ranef_list))) {
-      v <- names(pitcher_ranef_list)[[i]]
-      tmp <- paste(v, tmp, sep=" ")
-    }
+    tmp <- names(pit_ranef[[input$year]])
+    # for (i in seq_along(names(pit_ranef[[input$year]]))) {
+    #   v <- names(pit_ranef)[[i]]
+    #   tmp <- paste(v, tmp, sep=" ")
+    # }
 
     # sprintf("year: %s nrow: %d %d %s ",
     #         input$year,
@@ -66,15 +85,11 @@ shinyServer(function(input, output) {
   output$distPlot <- renderPlot({
     fit_var <- "value"
     year = input$year
-    if (! year %in% names(pitcher_ranef_list)) {
-      pitcher_ranef_list[[year]] <- BProDRA::extract_pitcher_ranef(mods_list[[year]])
-    }
 
-    fit_df <- pitcher_ranef_list[[year]]
-    fit_df$p <- BProDRA::logit_fun(fit_df$value)
+    fit_df <- pit_ranef[[year]]
     fit_df$fit_var <- fit_df[[fit_var]]
 
-    pit_df <- fit_df %>% filter(var_id == input$pit_id)
+    pit_df <- fit_df %>% filter(var_id == id_from_key(input$pit_key))
 
     fit_df %>%
       ggplot(aes(x=model_name, y=fit_var, group=model_name)) +
@@ -82,7 +97,7 @@ shinyServer(function(input, output) {
       theme_minimal() +
       coord_flip() +
       labs(title=sprintf("DRA Components: %s", year),
-           y=sprintf("%s",input$fit_var)) +
+           y=sprintf("%s",fit_var)) +
       geom_point(data=pit_df,
                    aes(x=model_name, y=fit_var, group=model_name), color='red', size=4)
 
@@ -91,37 +106,35 @@ shinyServer(function(input, output) {
   output$model_label <- renderText({
     year = input$year
 
-    if (! year %in% names(pitcher_ranef_list)) {
-      pitcher_ranef_list[[year]] <- BProDRA::extract_pitcher_ranef(mods_list[[year]])
-    }
+    # if (! year %in% names(pitcher_ranef_list)) {
+    #   pitcher_ranef_list[[year]] <- BProDRA::extract_pitcher_ranef(mods_list[[year]])
+    # }
 
-    fit_df <- pitcher_ranef_list[[year]]
- #   sprintf("year: %s month; ", year)
-    sprintf("year: %s nrow: %d pit_id: %s ", year, nrow(fit_df),input$pit_id)
-    # sprintf("year: %s nrow: d", year, nrow(fit_df))
-  })
+    tmp <- dra_runs[[input$year]]
+    tmp <- subset(tmp, pit_id == id_from_key(input$pit_key))
+    fit_df <- pit_ranef[[year]]
+#    sprintf("year: %s month; ", year)
+ #   sprintf("year: %s nrow: %d pit_id: %s ", year, nrow(fit_df),input$pit_id)
+    sprintf("year: %s pit_id, %s nrow: %d %d %d %d %s ",
+            year, id_from_key(input$pit_key), nrow(fit_df),
+            nrow(dra_runs[[year]]),
+            nrow(pit_ranef[[year]]),
+            nrow(model_ranef[[year]]), summary(tmp))
+
+   sprintf("%s %d %s ", names(tmp), nrow(tmp), id_from_key(input$pit_key))
+    })
 
   output$pitcher_components <- renderTable({
-    tmp <- BProDRA::get_dra_runs(dra_events_list[[input$year]],
-                                 mods_list[[input$year]],
-                                 input$pit_id)
+    tmp <- dra_runs[[input$year]]
+    tmp <- subset(tmp, pit_id == id_from_key(input$pit_key))
     tmp
   })
-
 
   output$model_ranef <- renderTable({
-    model_names <- names(mods_list[[input$year]])
-    ll <- lapply(model_names, function(model_name) {
-      tmp <- BProDRA::summarise_ranef(mods_list[[input$year]][[model_name]], input$pit_id)
-      tmp$model_name <- model_name
-      tmp$mean_value <- tmp$mean_value * 100
-      names(tmp) <- c("ranef_name", "mean_valuex100", "model_name")
-      tmp
-    })
-    tmp <- purrr::reduce(ll, rbind.data.frame)
+    tmp <- subset(model_ranef[[input$year]], pit_id == id_from_key(input$pit_key))
+    tmp$mean_value <- tmp$mean_value * 100
+    names(tmp) <- c("pit_id", "ranef_name", "mean_valuex100", "model_name")
     tmp
-
   })
-
 
 })

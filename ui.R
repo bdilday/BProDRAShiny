@@ -8,7 +8,8 @@
 #
 
 library(shiny)
-library(BProDRA)
+library(bprodradata)
+library(Lahman)
 
 # Define UI for application that draws a histogram
 shinyUI(fluidPage(
@@ -26,9 +27,11 @@ shinyUI(fluidPage(
 
     # Show a plot of the generated distribution
     mainPanel(
-       plotOutput("distPlot"),
-       tableOutput("pitcher_components"),
-       tableOutput("model_ranef")
+      plotOutput("distPlot"),
+      tableOutput("pitcher_components"),
+      tableOutput("model_ranef")
+#      textOutput("pit_list_label"),
+#      textOutput("model_label")
     )
   )
 ))
