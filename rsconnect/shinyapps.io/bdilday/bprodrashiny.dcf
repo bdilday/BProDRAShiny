@@ -3,9 +3,9 @@ title:
 account: bdilday
 server: shinyapps.io
 appId: 186571
-bundleId: 856199
+bundleId: 856246
 url: https://bdilday.shinyapps.io/bprodrashiny/
-when: 1496801931.62442
+when: 1496805012.66272
 asMultiple: FALSE
 asStatic: FALSE
 ignoredFiles: .Rbuildignore|DESCRIPTION|LICENSE|NAMESPACE|README.md|man/hello.Rd

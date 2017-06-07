@@ -17,21 +17,21 @@ shinyUI(fluidPage(
   # Application title
   titlePanel("BPro DRA Explorer"),
 
-  # Sidebar with a slider input for number of bins
-  sidebarLayout(
-    sidebarPanel(
-      selectInput("year", "year", c(2007, 2016), selected = NULL, multiple = FALSE,
-                  selectize = TRUE, width = NULL, size = NULL),
-      htmlOutput("selectUI")
+  fluidRow(
+
+    column(3,
+           selectInput("year", "year", c(2007, 2016), selected = NULL, multiple = FALSE,
+                       selectize = TRUE, width = NULL, size = NULL),
+           htmlOutput("selectUI")
     ),
 
-    # Show a plot of the generated distribution
-    mainPanel(
-      plotOutput("distPlot"),
-      tableOutput("pitcher_components"),
-      tableOutput("model_ranef")
-#      textOutput("pit_list_label"),
-#      textOutput("model_label")
-    )
+    column(8,  plotOutput("distPlot"))
+  ),
+
+  fluidRow(
+    column(4, h4("Pitcher random effect"),
+           tableOutput("pitcher_components")),
+    column(8, h4("Average secondary random effects"),
+           tableOutput("model_ranef"))
   )
 ))

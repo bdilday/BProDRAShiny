@@ -99,7 +99,10 @@ shinyServer(function(input, output) {
       labs(title=sprintf("DRA Components: %s", year),
            y=sprintf("%s",fit_var)) +
       geom_point(data=pit_df,
-                   aes(x=model_name, y=fit_var, group=model_name), color='red', size=4)
+                   aes(x=model_name, y=fit_var, group=model_name), color='red', size=4) +
+      theme(axis.text = element_text(face='bold', size=14),
+            axis.title = element_text(size=22))
+
 
   })
 
