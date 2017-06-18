@@ -14,7 +14,7 @@ library(lme4)
 library(magrittr)
 library(stringr)
 library(readr)
-library(bprodradata)
+library(bprodradata) # devtool::install_github('bdilday/bprodradata')
 
 print("hey ho, let's go")
 dra_runs <- list()
